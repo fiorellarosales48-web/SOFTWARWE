@@ -212,6 +212,7 @@ if __name__ == "__main__":
 
     sistema.agregar_usuario(Usuario("Nathaly", "Nathaly03@"))
     sistema.agregar_usuario(Usuario("Genesis", "Genesis123$"))
+    sistema.agregar_usuario(Usuario("Santiago", "Cedeno123"))
 
     interfaz = Interfaz(sistema)
     interfaz.ventana.mainloop()
