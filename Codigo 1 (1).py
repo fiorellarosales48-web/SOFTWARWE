@@ -6,6 +6,7 @@ from tkinter import messagebox
 USUARIOS_VALIDOS = {
     "Nathaly": "Nathaly03@",
     "Genesis": "Genesis123$"
+    "Fiorella": "fiorell123"
 }
 
 MAX_INTENTOS = 3
