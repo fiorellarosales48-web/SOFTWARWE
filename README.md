@@ -1,2 +1,2 @@
 # SOFTWARWE
-proyecto
+Proyecto de Ingenieria en Software
