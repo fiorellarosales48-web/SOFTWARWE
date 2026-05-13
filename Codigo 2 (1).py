@@ -1,218 +1,373 @@
-import tkinter as tk
-from tkinter import messagebox
-import re
+import tkinter as tk  # librería para interfaz gráfica
+from tkinter import messagebox  # mensajes emergentes (alertas, info)
+import os  # manejo de archivos del sistema
+import re  # expresiones regulares (validación de correo)
 
 
 # -------------------------------
-# CONSTANTES DEL SISTEMA
-MAX_INTENTOS = 3
+# 📌 USUARIOS DEL SISTEMA (LOGIN)
+# aquí se definen los usuarios permitidos para entrar al sistema
+USUARIOS_SISTEMA = {
+    "Nathaly": "Nathaly03@",
+    "Genesis": "Genesis123$",
+    "Santiago":"Cedeno123"
+}
+
+# archivo donde se guardan los clientes
+ARCHIVO_CLIENTES = "clientes.txt"
 
 
 # -------------------------------
-# CLASE USUARIO
-class Usuario:
-    """
-    Representa un usuario del sistema con credenciales seguras.
-    Aplica encapsulamiento para proteger los datos.
-    """
-
-    def __init__(self, nombre_usuario, contrasena):
-        self.__nombre_usuario = nombre_usuario
-        self.__contrasena = contrasena
-
-    def validar_acceso(self, usuario, contrasena):
-        """
-        Valida si las credenciales ingresadas son correctas.
-
-        Retorna:
-            bool: True si coinciden, False en caso contrario.
-        """
-        return (
-            self.__nombre_usuario == usuario
-            and self.__contrasena == contrasena
-        )
-
-
-# -------------------------------
-# CLASE SISTEMA DE ACCESO
-class SistemaAcceso:
-    """
-    Gestiona usuarios, validación de login y seguridad de contraseñas.
-    Aplica abstracción para ocultar la lógica interna.
-    """
+# 📌 CLASE PRINCIPAL DEL SISTEMA DE CLIENTES
+# aquí se maneja toda la lógica de clientes (guardar, validar, buscar)
+class SistemaClientes:
 
     def __init__(self):
-        self.__usuarios = []
-        self.__intentos = 0
+        # lista en memoria donde se guardan los clientes cargados
+        self.clientes = []
 
-    def agregar_usuario(self, usuario):
-        """
-        Agrega un usuario al sistema.
-        """
-        self.__usuarios.append(usuario)
+        # al iniciar el sistema, carga clientes desde el archivo
+        self.cargar_clientes()
 
-    def validar_credenciales(self, usuario, contrasena):
-        """
-        Verifica si el usuario existe y la contraseña es correcta.
-        """
-        for user in self.__usuarios:
-            if user.validar_acceso(usuario, contrasena):
-                return True
-        return False
+    # ---------------------------
+    # carga los clientes desde el archivo txt a la lista en memoria
+    def cargar_clientes(self):
 
-    def validar_seguridad_contrasena(self, contrasena):
-        """
-        Valida que la contraseña cumpla con los requisitos de seguridad:
-        - mínimo 8 caracteres
-        - una mayúscula
-        - un número
-        - un símbolo
-        """
-        if len(contrasena) < 8:
-            return False
-        if not re.search(r"[A-Z]", contrasena):
-            return False
-        if not re.search(r"[0-9]", contrasena):
-            return False
-        if not re.search(r"[!@#$%^&*(),.?\":{}|<>]", contrasena):
-            return False
-        return True
+        # verifica si el archivo existe
+        if os.path.exists(ARCHIVO_CLIENTES):
 
-    def intentar_login(self, usuario, contrasena):
-        """
-        Controla el proceso de inicio de sesión y los intentos permitidos.
-        """
-        if self.__intentos >= MAX_INTENTOS:
-            return "bloqueado"
+            # abre el archivo en modo lectura
+            with open(ARCHIVO_CLIENTES, "r", encoding="utf-8") as file:
 
-        if not self.validar_seguridad_contrasena(contrasena):
-            return "seguridad"
+                # lee cada línea del archivo
+                for linea in file:
 
-        if self.validar_credenciales(usuario, contrasena):
-            return "correcto"
-        else:
-            self.__intentos += 1
-            return "incorrecto"
+                    # separa los datos por coma
+                    datos = linea.strip().split(",")
+
+                    # valida que tenga todos los campos
+                    if len(datos) == 4:
+
+                        # guarda cliente en lista como diccionario
+                        self.clientes.append({
+                            "nombres": datos[0],
+                            "cedula": datos[1],
+                            "celular": datos[2],
+                            "correo": datos[3]
+                        })
+
+    # ---------------------------
+    # guarda un cliente en el archivo txt
+    def guardar_cliente(self, nombres, cedula, celular, correo):
+
+        # abre archivo en modo agregar (append)
+        with open(ARCHIVO_CLIENTES, "a", encoding="utf-8") as file:
+
+            # escribe el cliente en formato separado por comas
+            file.write(f"{nombres},{cedula},{celular},{correo}\n")
+
+    # ---------------------------
+    # valida todos los datos ingresados del cliente
+    def validar_datos(self, nombres, cedula, celular, correo):
+
+        # debe tener 4 palabras (2 nombres + 2 apellidos)
+        if len(nombres.strip().split()) != 4:
+            return "nombre_invalido"
+
+        # cédula debe ser numérica y de 10 dígitos
+        if not cedula.isdigit() or len(cedula) != 10:
+            return "cedula_invalida"
+
+        # celular debe ser numérico y de 10 dígitos
+        if not celular.isdigit() or len(celular) != 10:
+            return "celular_invalido"
+
+        # validación básica de correo electrónico
+        if not re.match(r"[^@]+@[^@]+\.[^@]+", correo):
+            return "correo_invalido"
+
+        # si todo está correcto
+        return "ok"
+
+    # ---------------------------
+    # registra un cliente nuevo en memoria y archivo
+    def registrar_cliente(self, nombres, cedula, celular, correo):
+
+        # verifica si la cédula ya existe (evita duplicados)
+        for c in self.clientes:
+            if c["cedula"] == cedula:
+                return "duplicado"
+
+        # agrega cliente a la lista en memoria
+        self.clientes.append({
+            "nombres": nombres,
+            "cedula": cedula,
+            "celular": celular,
+            "correo": correo
+        })
+
+        # guarda cliente en archivo
+        self.guardar_cliente(nombres, cedula, celular, correo)
+
+        return "ok"
+
+    # ---------------------------
+    # busca un cliente por número de cédula
+    def buscar_afiliado(self, cedula):
+
+        # recorre la lista de clientes
+        for c in self.clientes:
+
+            # si encuentra coincidencia
+            if c["cedula"] == cedula:
+                return c
+
+        # si no encuentra nada
+        return None
 
 
 # -------------------------------
-# INTERFAZ GRÁFICA
-class Interfaz:
-    """
-    Interfaz gráfica del sistema de login.
-    Permite interacción con el usuario.
-    """
+# 📌 VENTANA DE LOGIN
+class LoginWindow:
+
+    def __init__(self, sistema):
+        self.sistema = sistema  # referencia al sistema de clientes
+
+        # crea ventana principal
+        self.ventana = tk.Tk()
+        self.ventana.title("LOGIN SISTEMA")
+        self.ventana.geometry("320x230")
+        self.ventana.configure(bg="#d6eaf8")
+
+        # etiqueta usuario
+        tk.Label(self.ventana, text="Usuario", bg="#d6eaf8").pack()
+
+        # campo de entrada usuario
+        self.user = tk.Entry(self.ventana)
+        self.user.pack(pady=3)
+
+        # etiqueta contraseña
+        tk.Label(self.ventana, text="Contraseña", bg="#d6eaf8").pack()
+
+        # frame para organizar contraseña + botón ver
+        frame_pass = tk.Frame(self.ventana, bg="#d6eaf8")
+        frame_pass.pack()
+
+        # campo contraseña (oculta texto con *)
+        self.passw = tk.Entry(frame_pass, show="*")
+        self.passw.grid(row=0, column=0)
+
+        # variable para saber si está visible o no
+        self.ver = False
+
+        # botón para mostrar/ocultar contraseña
+        tk.Button(
+            frame_pass,
+            text="👁",
+            command=self.toggle_pass,
+            bg="#aed6f1"
+        ).grid(row=0, column=1, padx=5)
+
+        # botón de login
+        tk.Button(
+            self.ventana,
+            text="Ingresar",
+            bg="#85c1e9",
+            command=self.login
+        ).pack(pady=10)
+
+        # inicia la ventana
+        self.ventana.mainloop()
+
+    # ---------------------------
+    # muestra u oculta la contraseña
+    def toggle_pass(self):
+
+        if self.ver:
+            self.passw.config(show="*")
+            self.ver = False
+        else:
+            self.passw.config(show="")
+            self.ver = True
+
+    # ---------------------------
+    # valida el login del sistema
+    def login(self):
+
+        # obtiene datos ingresados
+        u = self.user.get()
+        p = self.passw.get()
+
+        # valida contra diccionario de usuarios
+        if u in USUARIOS_SISTEMA and USUARIOS_SISTEMA[u] == p:
+
+            messagebox.showinfo("OK", "Acceso concedido")
+
+            # cierra login
+            self.ventana.destroy()
+
+            # abre menú principal
+            MenuWindow(self.sistema)
+
+        else:
+            messagebox.showerror("Error", "Credenciales incorrectas")
+
+
+# -------------------------------
+# 📌 MENÚ PRINCIPAL
+class MenuWindow:
 
     def __init__(self, sistema):
         self.sistema = sistema
 
+        # ventana menú
         self.ventana = tk.Tk()
-        self.ventana.title("Sistema de Acceso")
-        self.ventana.geometry("400x320")
-        self.ventana.configure(bg="#1e1e2f")
+        self.ventana.title("MENÚ CLIENTES")
+        self.ventana.geometry("300x250")
+        self.ventana.configure(bg="#d6eaf8")
 
-        fuente = ("Arial", 12)
+        # título
+        tk.Label(self.ventana, text="GESTIÓN CLIENTES", bg="#d6eaf8").pack(pady=10)
 
-        # Título
-        tk.Label(
-            self.ventana,
-            text="Inicio de Sesión",
-            bg="#1e1e2f",
-            fg="white",
-            font=("Arial", 16, "bold"),
-        ).pack(pady=10)
-
-        # Usuario
-        tk.Label(
-            self.ventana,
-            text="Usuario",
-            bg="#1e1e2f",
-            fg="white",
-            font=fuente,
-        ).pack()
-
-        self.usuario_entry = tk.Entry(self.ventana, font=fuente)
-        self.usuario_entry.pack(pady=5)
-
-        # Contraseña
-        tk.Label(
-            self.ventana,
-            text="Contraseña",
-            bg="#1e1e2f",
-            fg="white",
-            font=fuente,
-        ).pack()
-
-        self.contrasena_entry = tk.Entry(
-            self.ventana,
-            show="*",
-            font=fuente,
-        )
-        self.contrasena_entry.pack(pady=5)
-
-        # Mostrar contraseña
-        self.mostrar_contrasena = tk.BooleanVar()
-
-        tk.Checkbutton(
-            self.ventana,
-            text="Mostrar contraseña",
-            variable=self.mostrar_contrasena,
-            command=self.toggle_password,
-            bg="#1e1e2f",
-            fg="white",
-            selectcolor="#1e1e2f",
-        ).pack()
-
-        # Botón login
+        # botón registrar cliente
         tk.Button(
             self.ventana,
-            text="Ingresar",
-            bg="#4CAF50",
-            fg="white",
-            font=fuente,
-            command=self.login,
-        ).pack(pady=15)
+            text="Registrar cliente",
+            bg="#85c1e9",
+            command=self.abrir_registro
+        ).pack(pady=5)
 
-    def toggle_password(self):
-        """
-        Muestra u oculta la contraseña en el campo de entrada.
-        """
-        if self.mostrar_contrasena.get():
-            self.contrasena_entry.config(show="")
-        else:
-            self.contrasena_entry.config(show="*")
+        # botón cliente afiliado
+        tk.Button(
+            self.ventana,
+            text="Cliente afiliado",
+            bg="#85c1e9",
+            command=self.abrir_afiliado
+        ).pack(pady=5)
 
-    def login(self):
-        """
-        Procesa el intento de inicio de sesión.
-        """
-        usuario = self.usuario_entry.get()
-        contrasena = self.contrasena_entry.get()
+        self.ventana.mainloop()
 
-        resultado = self.sistema.intentar_login(usuario, contrasena)
+    # abre ventana de registro
+    def abrir_registro(self):
+        RegistroCliente(self.ventana, self.sistema)
 
-        if resultado == "correcto":
-            messagebox.showinfo("Éxito", "Acceso concedido")
-        elif resultado == "incorrecto":
-            messagebox.showerror("Error", "Datos incorrectos")
-        elif resultado == "seguridad":
-            messagebox.showwarning(
-                "Advertencia",
-                "La contraseña no cumple con los requisitos:\n"
-                "- 8 caracteres\n- Mayúscula\n- Número\n- Símbolo",
-            )
-        elif resultado == "bloqueado":
-            messagebox.showerror("Bloqueado", "Demasiados intentos")
+    # abre ventana de afiliado
+    def abrir_afiliado(self):
+        AfiliadoCliente(self.ventana, self.sistema)
 
 
 # -------------------------------
-# PROGRAMA PRINCIPAL
+# 📌 REGISTRO DE CLIENTE
+class RegistroCliente:
+
+    def __init__(self, parent, sistema):
+        self.sistema = sistema
+
+        # ventana secundaria
+        self.ventana = tk.Toplevel(parent)
+        self.ventana.title("REGISTRO CLIENTE")
+        self.ventana.geometry("350x350")
+        self.ventana.configure(bg="#ebf5fb")
+
+        # campos del formulario
+        self.crear_input("Nombres y Apellidos", "nombres")
+        self.crear_input("Cédula", "cedula")
+        self.crear_input("Celular", "celular")
+        self.crear_input("Correo", "correo")
+
+        # botón guardar
+        tk.Button(
+            self.ventana,
+            text="Guardar",
+            bg="#85c1e9",
+            command=self.guardar
+        ).pack(pady=10)
+
+    # crea campos de entrada reutilizables
+    def crear_input(self, texto, nombre):
+
+        tk.Label(self.ventana, text=texto, bg="#ebf5fb").pack()
+
+        entry = tk.Entry(self.ventana)
+        entry.pack(pady=2)
+
+        setattr(self, nombre, entry)
+
+    # guarda cliente
+    def guardar(self):
+
+        # obtiene datos
+        n = self.nombres.get()
+        c = self.cedula.get()
+        ce = self.celular.get()
+        co = self.correo.get()
+
+        # valida datos
+        val = self.sistema.validar_datos(n, c, ce, co)
+
+        if val != "ok":
+            messagebox.showerror("Error", "Datos inválidos")
+            return
+
+        # registra cliente
+        res = self.sistema.registrar_cliente(n, c, ce, co)
+
+        if res == "duplicado":
+            messagebox.showerror("Error", "Cliente ya existe")
+        else:
+            messagebox.showinfo("OK", "Cliente registrado")
+            self.ventana.destroy()
+
+
+# -------------------------------
+# 📌 CLIENTE AFILIADO
+class AfiliadoCliente:
+
+    def __init__(self, parent, sistema):
+        self.sistema = sistema
+
+        # ventana búsqueda
+        self.ventana = tk.Toplevel(parent)
+        self.ventana.title("CLIENTE AFILIADO")
+        self.ventana.geometry("300x200")
+        self.ventana.configure(bg="#ebf5fb")
+
+        # campo cédula
+        tk.Label(self.ventana, text="Cédula", bg="#ebf5fb").pack()
+
+        self.cedula = tk.Entry(self.ventana)
+        self.cedula.pack()
+
+        # botón buscar
+        tk.Button(
+            self.ventana,
+            text="Buscar",
+            bg="#85c1e9",
+            command=self.buscar
+        ).pack(pady=10)
+
+    # busca cliente
+    def buscar(self):
+
+        cedula = self.cedula.get()
+
+        cliente = self.sistema.buscar_afiliado(cedula)
+
+        if cliente:
+            messagebox.showinfo(
+                "Cliente",
+                f"{cliente['nombres']}\n{cliente['celular']}\n{cliente['correo']}"
+            )
+        else:
+            messagebox.showerror("Error", "No encontrado")
+
+
+# -------------------------------
+# 📌 INICIO DEL PROGRAMA
 if __name__ == "__main__":
-    sistema = SistemaAcceso()
 
-    sistema.agregar_usuario(Usuario("Nathaly", "Nathaly03@"))
-    sistema.agregar_usuario(Usuario("Genesis", "Genesis123$"))
-    sistema.agregar_usuario(Usuario("Santiago", "Cedeno123"))
+    # crea sistema de clientes
+    sistema = SistemaClientes()
 
-    interfaz = Interfaz(sistema)
-    interfaz.ventana.mainloop()
+    # abre login
+    LoginWindow(sistema)
