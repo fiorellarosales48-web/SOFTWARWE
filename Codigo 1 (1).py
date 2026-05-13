@@ -5,7 +5,7 @@ from tkinter import messagebox
 # CONSTANTES DEL SISTEMA DE AUTENTICACIÓN
 USUARIOS_VALIDOS = {
     "Nathaly": "Nathaly03@",
-    "Genesis": "Genesis123$"
+    "Genesis": "Genesis123$",
     "Fiorella": "fiorell123"
 }
 
