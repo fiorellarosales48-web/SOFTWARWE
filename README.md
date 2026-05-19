@@ -1,29 +1,86 @@
 # SOFTWARE - Sistema de Gestión de Clientes
 
-Este proyecto es una aplicación desarrollada en Python utilizando programación orientada a objetos (POO) y una interfaz gráfica con Tkinter.
+Este proyecto es una aplicación desarrollada en Python utilizando **Programación Orientada a Objetos (POO)** y una interfaz gráfica con **Tkinter**.
+
+---
 
 ## 📌 Descripción
 
-El sistema permite la gestión de clientes mediante un inicio de sesión seguro y funcionalidades como registro y búsqueda de clientes.
+El sistema permite la gestión completa de clientes mediante un inicio de sesión seguro y funcionalidades de registro, validación y búsqueda.
+
+A lo largo del desarrollo, el sistema fue mejorado para incluir validaciones más realistas, estructura modular y manejo avanzado de datos.
+
+---
 
 ## ⚙️ Funcionalidades
 
-- Inicio de sesión con usuarios del sistema
-- Mostrar y ocultar contraseña
-- Registro de clientes con validaciones:
-  - Nombres completos (2 nombres y 2 apellidos)
-  - Cédula (10 dígitos)
-  - Celular (10 dígitos)
-  - Correo electrónico válido
-- Almacenamiento de clientes en archivo `.txt`
-- Búsqueda de clientes afiliados por cédula
+### 🔐 Sistema de login seguro
+- Inicio de sesión con usuarios predefinidos
+- Validación de contraseñas seguras
+- Botón para mostrar/ocultar contraseña
 
-## 🧠 Tecnologías utilizadas
+### 👤 Registro de clientes
+- Validación completa de datos personales
+- Registro con:
+  - Nombres completos
+  - Cédula
+  - Celular
+  - Correo electrónico
+- Evita registros duplicados
 
-- Python
+### 🌍 Validaciones avanzadas por país
+- Cédula validada según país:
+  - Ecuador 🇪🇨
+  - Perú 🇵🇪
+  - Colombia 🇨🇴
+  - México 🇲🇽
+  - España 🇪🇸
+
+- Celular validado por:
+  - longitud variable por país
+  - prefijo obligatorio
+
+### 📧 Validación de correo mejorada
+- Validación de formato real
+- Detección de errores comunes (ej: dominios mal escritos como “gamil”)
+- Soporte para dominios reales:
+  - gmail.com
+  - hotmail.com
+  - outlook.com
+  - yahoo.com
+  - dominios educativos y corporativos (.edu.ec, .com.ec, .es, etc.)
+
+### 💾 Persistencia de datos
+- Almacenamiento en archivo `.txt`
+- Carga automática de clientes al iniciar el sistema
+
+### 🔎 Búsqueda de clientes
+- Búsqueda por número de cédula
+- Visualización de datos del cliente
+
+---
+
+## 🧠 Mejoras implementadas en el sistema
+
+- ✔ Validaciones más estrictas y realistas
+- ✔ Validación de cédula por país
+- ✔ Validación de celular según reglas internacionales
+- ✔ Validación de correo más completa y flexible
+- ✔ Mensajes de error específicos y detallados
+- ✔ Separación modular del código (POO)
+- ✔ Mejor experiencia de usuario en interfaz Tkinter
+
+---
+
+## 🛠 Tecnologías utilizadas
+
+- Python 🐍
 - Tkinter (interfaz gráfica)
-- Expresiones regulares (validación de datos)
+- Expresiones regulares (re)
 - Manejo de archivos (.txt)
+- Programación Orientada a Objetos (POO)
+
+---
 
 ## 📂 Estructura del proyecto
 
@@ -32,10 +89,18 @@ El sistema permite la gestión de clientes mediante un inicio de sesión seguro 
 - Registro de clientes
 - Consulta de clientes afiliados
 
+---
+
 ## 👨‍💻 Autor
 
-Proyecto desarrollado como parte de la asignatura de Ingeniería de Software.
+Proyecto desarrollado como parte de la asignatura de **Ingeniería de Software**.
+
+---
 
 ## 📌 Nota
 
-Este sistema utiliza programación orientada a objetos y separación de lógica para mejorar la organización del código.
+Este sistema evolucionó desde una versión básica a una versión más avanzada con:
+- validaciones por país
+- control de errores detallado
+- mejor estructura de código
+- mayor realismo en datos ingresados
