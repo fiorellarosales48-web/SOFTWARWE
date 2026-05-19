@@ -1,373 +1,456 @@
-import tkinter as tk  # librería para interfaz gráfica
-from tkinter import messagebox  # mensajes emergentes (alertas, info)
-import os  # manejo de archivos del sistema
-import re  # expresiones regulares (validación de correo)
+# ==========================================================
+# IMPORTACIÓN DE LIBRERÍAS
+# ==========================================================
+# tkinter -> interfaz gráfica
+# messagebox -> ventanas de alerta
+# os -> manejo de archivos
+# re -> expresiones regulares (validaciones)
+# ==========================================================
+
+import tkinter as tk
+from tkinter import messagebox
+import os
+import re
 
 
-# -------------------------------
-# 📌 USUARIOS DEL SISTEMA (LOGIN)
-# aquí se definen los usuarios permitidos para entrar al sistema
+# ==========================================================
+# USUARIOS DEL SISTEMA (LOGIN)
+# ==========================================================
+# Diccionario de usuarios predefinidos
+# Se usa para validar el acceso al sistema
+# ==========================================================
 USUARIOS_SISTEMA = {
     "Nathaly": "Nathaly03@",
     "Genesis": "Genesis123$",
-    "Santiago":"Cedeno123"
+    "Santiago": "Cedeno123"
 }
 
-# archivo donde se guardan los clientes
+# Archivo donde se guardan clientes registrados
 ARCHIVO_CLIENTES = "clientes.txt"
 
 
-# -------------------------------
-# 📌 CLASE PRINCIPAL DEL SISTEMA DE CLIENTES
-# aquí se maneja toda la lógica de clientes (guardar, validar, buscar)
+# ==========================================================
+# CONFIGURACIÓN DE PAÍSES
+# ==========================================================
+# Cada país tiene:
+# - código telefónico
+# - cantidad de dígitos
+# - número inicial obligatorio
+# - bandera visual
+# Esto permite validar celulares de forma realista
+# ==========================================================
+CODIGOS_PAISES = {
+    "Ecuador": {"codigo": "+593", "digitos": 9, "inicio": "9", "bandera": "🇪🇨"},
+    "Perú": {"codigo": "+51", "digitos": 9, "inicio": "9", "bandera": "🇵🇪"},
+    "Colombia": {"codigo": "+57", "digitos": 10, "inicio": "3", "bandera": "🇨🇴"},
+    "México": {"codigo": "+52", "digitos": 10, "inicio": "1", "bandera": "🇲🇽"},
+    "España": {"codigo": "+34", "digitos": 9, "inicio": "6", "bandera": "🇪🇸"},
+}
+
+
+# ==========================================================
+# VALIDACIÓN DE CONTRASEÑA
+# ==========================================================
+# Se asegura que la contraseña sea segura:
+# - mínimo 8 caracteres
+# - mayúsculas
+# - minúsculas
+# - números
+# - símbolos
+# ==========================================================
+def validar_password(password):
+    return (
+        len(password) >= 8 and
+        re.search(r"[A-Z]", password) and
+        re.search(r"[a-z]", password) and
+        re.search(r"\d", password) and
+        re.search(r"[!@#$%^&*(),.?\":{}|<>]", password)
+    )
+
+
+# ==========================================================
+# VALIDACIÓN DE CORREO ELECTRÓNICO
+# ==========================================================
+# 1. Verifica estructura general (usuario@dominio.extensión)
+# 2. Permite extensiones como .com .es .com.ec .edu.ec
+# 3. Detecta dominios mal escritos (gamil, hotmial, etc.)
+# ==========================================================
+def validar_correo(correo):
+
+    # patrón general de correo válido
+    patron = r"^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$"
+
+    # si no cumple estructura básica
+    if not re.match(patron, correo):
+        return "formato"
+
+    usuario, dominio = correo.split("@")
+    dominio = dominio.lower()
+
+    partes = dominio.split(".")
+
+    # debe tener al menos dominio + extensión
+    if len(partes) < 2:
+        return "dominio"
+
+    base = partes[0]
+
+    # evita dominios demasiado cortos o mal escritos
+    if len(base) < 2:
+        return "dominio"
+
+    return "ok"
+
+
+# ==========================================================
+# VALIDACIÓN DE CÉDULA POR PAÍS
+# ==========================================================
+# Cada país tiene formato distinto:
+# - Ecuador: 10 dígitos
+# - Perú: 8 dígitos
+# - Colombia: 10 dígitos
+# - México: 10-18 alfanumérico
+# - España: 8 números + 1 letra
+# ==========================================================
+def validar_cedula(cedula, pais):
+
+    if pais == "Ecuador":
+        return cedula.isdigit() and len(cedula) == 10
+
+    if pais == "Perú":
+        return cedula.isdigit() and len(cedula) == 8
+
+    if pais == "Colombia":
+        return cedula.isdigit() and len(cedula) == 10
+
+    if pais == "México":
+        return cedula.isalnum() and 10 <= len(cedula) <= 18
+
+    if pais == "España":
+        return re.match(r"^\d{8}[A-Za-z]$", cedula) is not None
+
+    return False
+
+
+# ==========================================================
+# CLASE: SISTEMA DE CLIENTES
+# ==========================================================
+# Se encarga de:
+# - cargar clientes desde archivo
+# - guardar clientes nuevos
+# - validar datos
+# - buscar clientes
+# ==========================================================
 class SistemaClientes:
 
     def __init__(self):
-        # lista en memoria donde se guardan los clientes cargados
         self.clientes = []
+        self.cargar()
 
-        # al iniciar el sistema, carga clientes desde el archivo
-        self.cargar_clientes()
-
-    # ---------------------------
-    # carga los clientes desde el archivo txt a la lista en memoria
-    def cargar_clientes(self):
-
-        # verifica si el archivo existe
+    # --------------------------
+    # CARGAR CLIENTES DESDE ARCHIVO
+    # --------------------------
+    def cargar(self):
         if os.path.exists(ARCHIVO_CLIENTES):
-
-            # abre el archivo en modo lectura
-            with open(ARCHIVO_CLIENTES, "r", encoding="utf-8") as file:
-
-                # lee cada línea del archivo
-                for linea in file:
-
-                    # separa los datos por coma
-                    datos = linea.strip().split(",")
-
-                    # valida que tenga todos los campos
-                    if len(datos) == 4:
-
-                        # guarda cliente en lista como diccionario
+            with open(ARCHIVO_CLIENTES, "r", encoding="utf-8") as f:
+                for l in f:
+                    d = l.strip().split(",")
+                    if len(d) == 5:
                         self.clientes.append({
-                            "nombres": datos[0],
-                            "cedula": datos[1],
-                            "celular": datos[2],
-                            "correo": datos[3]
+                            "nombres": d[0],
+                            "cedula": d[1],
+                            "pais": d[2],
+                            "celular": d[3],
+                            "correo": d[4]
                         })
 
-    # ---------------------------
-    # guarda un cliente en el archivo txt
-    def guardar_cliente(self, nombres, cedula, celular, correo):
+    # --------------------------
+    # GUARDAR CLIENTE EN ARCHIVO
+    # --------------------------
+    def guardar(self, n, c, p, ce, co):
+        with open(ARCHIVO_CLIENTES, "a", encoding="utf-8") as f:
+            f.write(f"{n},{c},{p},{ce},{co}\n")
 
-        # abre archivo en modo agregar (append)
-        with open(ARCHIVO_CLIENTES, "a", encoding="utf-8") as file:
+    # --------------------------
+    # VALIDAR TODOS LOS CAMPOS
+    # --------------------------
+    def validar(self, n, c, ce, co, p):
 
-            # escribe el cliente en formato separado por comas
-            file.write(f"{nombres},{cedula},{celular},{correo}\n")
+        d = CODIGOS_PAISES[p]
 
-    # ---------------------------
-    # valida todos los datos ingresados del cliente
-    def validar_datos(self, nombres, cedula, celular, correo):
+        # nombre completo (nombre + 3 apellidos)
+        if len(n.split()) != 4:
+            return "nombre"
 
-        # debe tener 4 palabras (2 nombres + 2 apellidos)
-        if len(nombres.strip().split()) != 4:
-            return "nombre_invalido"
+        # cédula según país
+        if not validar_cedula(c, p):
+            return "cedula"
 
-        # cédula debe ser numérica y de 10 dígitos
-        if not cedula.isdigit() or len(cedula) != 10:
-            return "cedula_invalida"
+        # celular solo números
+        if not ce.isdigit():
+            return "celular_num"
 
-        # celular debe ser numérico y de 10 dígitos
-        if not celular.isdigit() or len(celular) != 10:
-            return "celular_invalido"
+        # inicio correcto del número
+        if not ce.startswith(d["inicio"]):
+            return "celular_inicio"
 
-        # validación básica de correo electrónico
-        if not re.match(r"[^@]+@[^@]+\.[^@]+", correo):
-            return "correo_invalido"
+        # longitud correcta según país
+        if len(ce) != d["digitos"]:
+            return "celular_longitud"
 
-        # si todo está correcto
+        # validación de correo
+        correo_estado = validar_correo(co)
+
+        if correo_estado == "formato":
+            return "correo_formato"
+        if correo_estado == "dominio":
+            return "correo_dominio"
+
         return "ok"
 
-    # ---------------------------
-    # registra un cliente nuevo en memoria y archivo
-    def registrar_cliente(self, nombres, cedula, celular, correo):
+    # --------------------------
+    # REGISTRAR CLIENTE
+    # --------------------------
+    def registrar(self, n, c, p, ce, co):
 
-        # verifica si la cédula ya existe (evita duplicados)
-        for c in self.clientes:
-            if c["cedula"] == cedula:
-                return "duplicado"
+        for x in self.clientes:
+            if x["cedula"] == c:
+                return "dup"
 
-        # agrega cliente a la lista en memoria
         self.clientes.append({
-            "nombres": nombres,
-            "cedula": cedula,
-            "celular": celular,
-            "correo": correo
+            "nombres": n,
+            "cedula": c,
+            "pais": p,
+            "celular": ce,
+            "correo": co
         })
 
-        # guarda cliente en archivo
-        self.guardar_cliente(nombres, cedula, celular, correo)
-
+        self.guardar(n, c, p, ce, co)
         return "ok"
 
-    # ---------------------------
-    # busca un cliente por número de cédula
-    def buscar_afiliado(self, cedula):
-
-        # recorre la lista de clientes
-        for c in self.clientes:
-
-            # si encuentra coincidencia
-            if c["cedula"] == cedula:
-                return c
-
-        # si no encuentra nada
+    # --------------------------
+    # BUSCAR CLIENTE
+    # --------------------------
+    def buscar(self, c):
+        for x in self.clientes:
+            if x["cedula"] == c:
+                return x
         return None
 
 
-# -------------------------------
-# 📌 VENTANA DE LOGIN
-class LoginWindow:
+# ==========================================================
+# CLASE: LOGIN
+# ==========================================================
+# Encargada de:
+# - autenticar usuario
+# - validar contraseña segura
+# - abrir menú principal
+# ==========================================================
+class Login:
 
     def __init__(self, sistema):
-        self.sistema = sistema  # referencia al sistema de clientes
 
-        # crea ventana principal
-        self.ventana = tk.Tk()
-        self.ventana.title("LOGIN SISTEMA")
-        self.ventana.geometry("320x230")
-        self.ventana.configure(bg="#d6eaf8")
+        self.sistema = sistema
 
-        # etiqueta usuario
-        tk.Label(self.ventana, text="Usuario", bg="#d6eaf8").pack()
+        self.v = tk.Tk()
+        self.v.title("LOGIN")
+        self.v.geometry("350x300")
+        self.v.configure(bg="#d6eaf8")
 
-        # campo de entrada usuario
-        self.user = tk.Entry(self.ventana)
-        self.user.pack(pady=3)
+        tk.Label(self.v, text="Usuario", bg="#d6eaf8").pack()
+        self.u = tk.Entry(self.v)
+        self.u.pack()
 
-        # etiqueta contraseña
-        tk.Label(self.ventana, text="Contraseña", bg="#d6eaf8").pack()
+        tk.Label(self.v, text="Contraseña", bg="#d6eaf8").pack()
 
-        # frame para organizar contraseña + botón ver
-        frame_pass = tk.Frame(self.ventana, bg="#d6eaf8")
-        frame_pass.pack()
+        frame = tk.Frame(self.v, bg="#d6eaf8")
+        frame.pack(pady=5)
 
-        # campo contraseña (oculta texto con *)
-        self.passw = tk.Entry(frame_pass, show="*")
-        self.passw.grid(row=0, column=0)
+        self.p = tk.Entry(frame, show="*", width=22)
+        self.p.grid(row=0, column=0)
 
-        # variable para saber si está visible o no
-        self.ver = False
+        self.show = False
 
-        # botón para mostrar/ocultar contraseña
-        tk.Button(
-            frame_pass,
-            text="👁",
-            command=self.toggle_pass,
-            bg="#aed6f1"
-        ).grid(row=0, column=1, padx=5)
+        tk.Button(frame, text="👁", width=2,
+                  command=self.toggle).grid(row=0, column=1)
 
-        # botón de login
-        tk.Button(
-            self.ventana,
-            text="Ingresar",
-            bg="#85c1e9",
-            command=self.login
-        ).pack(pady=10)
+        tk.Button(self.v, text="Entrar",
+                  command=self.login).pack(pady=10)
 
-        # inicia la ventana
-        self.ventana.mainloop()
+        self.v.mainloop()
 
-    # ---------------------------
-    # muestra u oculta la contraseña
-    def toggle_pass(self):
+    # mostrar/ocultar contraseña
+    def toggle(self):
+        self.show = not self.show
+        self.p.config(show="" if self.show else "*")
 
-        if self.ver:
-            self.passw.config(show="*")
-            self.ver = False
-        else:
-            self.passw.config(show="")
-            self.ver = True
-
-    # ---------------------------
-    # valida el login del sistema
+    # validar login
     def login(self):
 
-        # obtiene datos ingresados
-        u = self.user.get()
-        p = self.passw.get()
+        u = self.u.get()
+        p = self.p.get()
 
-        # valida contra diccionario de usuarios
-        if u in USUARIOS_SISTEMA and USUARIOS_SISTEMA[u] == p:
-
-            messagebox.showinfo("OK", "Acceso concedido")
-
-            # cierra login
-            self.ventana.destroy()
-
-            # abre menú principal
-            MenuWindow(self.sistema)
-
-        else:
-            messagebox.showerror("Error", "Credenciales incorrectas")
-
-
-# -------------------------------
-# 📌 MENÚ PRINCIPAL
-class MenuWindow:
-
-    def __init__(self, sistema):
-        self.sistema = sistema
-
-        # ventana menú
-        self.ventana = tk.Tk()
-        self.ventana.title("MENÚ CLIENTES")
-        self.ventana.geometry("300x250")
-        self.ventana.configure(bg="#d6eaf8")
-
-        # título
-        tk.Label(self.ventana, text="GESTIÓN CLIENTES", bg="#d6eaf8").pack(pady=10)
-
-        # botón registrar cliente
-        tk.Button(
-            self.ventana,
-            text="Registrar cliente",
-            bg="#85c1e9",
-            command=self.abrir_registro
-        ).pack(pady=5)
-
-        # botón cliente afiliado
-        tk.Button(
-            self.ventana,
-            text="Cliente afiliado",
-            bg="#85c1e9",
-            command=self.abrir_afiliado
-        ).pack(pady=5)
-
-        self.ventana.mainloop()
-
-    # abre ventana de registro
-    def abrir_registro(self):
-        RegistroCliente(self.ventana, self.sistema)
-
-    # abre ventana de afiliado
-    def abrir_afiliado(self):
-        AfiliadoCliente(self.ventana, self.sistema)
-
-
-# -------------------------------
-# 📌 REGISTRO DE CLIENTE
-class RegistroCliente:
-
-    def __init__(self, parent, sistema):
-        self.sistema = sistema
-
-        # ventana secundaria
-        self.ventana = tk.Toplevel(parent)
-        self.ventana.title("REGISTRO CLIENTE")
-        self.ventana.geometry("350x350")
-        self.ventana.configure(bg="#ebf5fb")
-
-        # campos del formulario
-        self.crear_input("Nombres y Apellidos", "nombres")
-        self.crear_input("Cédula", "cedula")
-        self.crear_input("Celular", "celular")
-        self.crear_input("Correo", "correo")
-
-        # botón guardar
-        tk.Button(
-            self.ventana,
-            text="Guardar",
-            bg="#85c1e9",
-            command=self.guardar
-        ).pack(pady=10)
-
-    # crea campos de entrada reutilizables
-    def crear_input(self, texto, nombre):
-
-        tk.Label(self.ventana, text=texto, bg="#ebf5fb").pack()
-
-        entry = tk.Entry(self.ventana)
-        entry.pack(pady=2)
-
-        setattr(self, nombre, entry)
-
-    # guarda cliente
-    def guardar(self):
-
-        # obtiene datos
-        n = self.nombres.get()
-        c = self.cedula.get()
-        ce = self.celular.get()
-        co = self.correo.get()
-
-        # valida datos
-        val = self.sistema.validar_datos(n, c, ce, co)
-
-        if val != "ok":
-            messagebox.showerror("Error", "Datos inválidos")
+        if not validar_password(p):
+            messagebox.showerror("Error", "Contraseña inválida")
             return
 
-        # registra cliente
-        res = self.sistema.registrar_cliente(n, c, ce, co)
-
-        if res == "duplicado":
-            messagebox.showerror("Error", "Cliente ya existe")
+        if u in USUARIOS_SISTEMA and USUARIOS_SISTEMA[u] == p:
+            self.v.destroy()
+            Menu(self.sistema)
         else:
-            messagebox.showinfo("OK", "Cliente registrado")
-            self.ventana.destroy()
+            messagebox.showerror("Error", "Usuario o contraseña incorrectos")
 
 
-# -------------------------------
-# 📌 CLIENTE AFILIADO
-class AfiliadoCliente:
+# ==========================================================
+# CLASE: MENÚ PRINCIPAL
+# ==========================================================
+class Menu:
 
-    def __init__(self, parent, sistema):
+    def __init__(self, sistema):
+
         self.sistema = sistema
 
-        # ventana búsqueda
-        self.ventana = tk.Toplevel(parent)
-        self.ventana.title("CLIENTE AFILIADO")
-        self.ventana.geometry("300x200")
-        self.ventana.configure(bg="#ebf5fb")
+        self.v = tk.Tk()
+        self.v.title("MENÚ")
+        self.v.geometry("450x450")
+        self.v.configure(bg="#d6eaf8")
 
-        # campo cédula
-        tk.Label(self.ventana, text="Cédula", bg="#ebf5fb").pack()
+        self.menu()
+        self.v.mainloop()
 
-        self.cedula = tk.Entry(self.ventana)
-        self.cedula.pack()
+    def limpiar(self):
+        for i in self.v.winfo_children():
+            i.destroy()
 
-        # botón buscar
-        tk.Button(
-            self.ventana,
-            text="Buscar",
-            bg="#85c1e9",
-            command=self.buscar
-        ).pack(pady=10)
+    def menu(self):
 
-    # busca cliente
+        self.limpiar()
+
+        tk.Label(self.v, text="SISTEMA CLIENTES",
+                 bg="#d6eaf8").pack(pady=10)
+
+        tk.Button(self.v, text="Registrar",
+                  command=self.reg).pack(pady=5)
+
+        tk.Button(self.v, text="Afiliado",
+                  command=self.afi).pack(pady=5)
+
+    def reg(self):
+        self.limpiar()
+        Registro(self)
+
+    def afi(self):
+
+        self.limpiar()
+
+        if len(self.sistema.clientes) == 0:
+            messagebox.showinfo("Info", "No hay clientes")
+            self.menu()
+            return
+
+        tk.Label(self.v, text="Cédula", bg="#d6eaf8").pack()
+        self.c = tk.Entry(self.v)
+        self.c.pack()
+
+        self.c.bind("<Return>", lambda e: self.buscar())
+
+        tk.Button(self.v, text="Buscar",
+                  command=self.buscar).pack()
+
+        tk.Button(self.v, text="Regresar",
+                  command=self.menu).pack()
+
     def buscar(self):
 
-        cedula = self.cedula.get()
+        r = self.sistema.buscar(self.c.get())
 
-        cliente = self.sistema.buscar_afiliado(cedula)
-
-        if cliente:
-            messagebox.showinfo(
-                "Cliente",
-                f"{cliente['nombres']}\n{cliente['celular']}\n{cliente['correo']}"
-            )
+        if r:
+            messagebox.showinfo("Cliente", str(r))
         else:
             messagebox.showerror("Error", "No encontrado")
 
 
-# -------------------------------
-# 📌 INICIO DEL PROGRAMA
+# ==========================================================
+# CLASE: REGISTRO DE CLIENTES
+# ==========================================================
+class Registro:
+
+    def __init__(self, menu):
+
+        self.menu = menu
+        self.sistema = menu.sistema
+        self.v = menu.v
+
+        tk.Label(self.v, text="Registro",
+                 bg="#d6eaf8").pack()
+
+        tk.Label(self.v, text="Nombre completo").pack()
+        self.n = tk.Entry(self.v)
+        self.n.pack()
+
+        tk.Label(self.v, text="Cédula").pack()
+        self.c = tk.Entry(self.v)
+        self.c.pack()
+
+        self.p = tk.StringVar()
+        self.p.set("Ecuador")
+
+        tk.OptionMenu(self.v, self.p,
+                      *CODIGOS_PAISES.keys()).pack()
+
+        self.ce = tk.Entry(self.v)
+        self.ce.pack()
+
+        self.co = tk.Entry(self.v)
+        self.co.pack()
+
+        tk.Button(self.v, text="Guardar",
+                  command=self.save).pack()
+
+        self.update()
+
+    def update(self):
+        d = CODIGOS_PAISES[self.p.get()]
+
+    def save(self):
+
+        r = self.sistema.validar(
+            self.n.get(),
+            self.c.get(),
+            self.ce.get(),
+            self.co.get(),
+            self.p.get()
+        )
+
+        errores = {
+            "nombre": "Nombre incompleto",
+            "cedula": "Cédula inválida según país",
+            "celular_num": "Celular solo números",
+            "celular_inicio": "Inicio incorrecto",
+            "celular_longitud": "Longitud incorrecta",
+            "correo_formato": "Correo inválido",
+            "correo_dominio": "Dominio incorrecto",
+        }
+
+        if r != "ok":
+            messagebox.showerror("Error", errores.get(r))
+            return
+
+        self.sistema.registrar(
+            self.n.get(),
+            self.c.get(),
+            self.p.get(),
+            self.ce.get(),
+            self.co.get()
+        )
+
+        messagebox.showinfo("OK", "Cliente guardado")
+        self.menu.menu()
+
+
+# ==========================================================
+# INICIO DEL PROGRAMA
+# ==========================================================
 if __name__ == "__main__":
-
-    # crea sistema de clientes
     sistema = SistemaClientes()
-
-    # abre login
-    LoginWindow(sistema)
+    Login(sistema)
